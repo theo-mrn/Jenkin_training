@@ -11,7 +11,7 @@ pipeline {
         stage('Test') {
             steps {
                 sh 'pip install -r requirements.txt --break-system-packages'
-                sh 'pytest'
+                sh 'python3 -m pytest'
             }
         }
         stage('Build') {
