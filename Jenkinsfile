@@ -1,11 +1,17 @@
 pipeline {
     agent any
 
+    environment {
+        // Tag avec le numéro de build Jenkins (ex: 1.0.42)
+        IMAGE_NAME = "jenkins-training-app"
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        REGISTRY_USER = "" // Sera rempli par withCredentials
+    }
+
     stages {
         stage('Hello') {
             steps {
-                echo 'Hello Jenkins'
-                sh 'echo "Ceci est une commande shell"'
+                echo "Building version ${IMAGE_TAG}"
             }
         }
         stage('Test') {
@@ -16,19 +22,24 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'docker build -t jenkins-training-app .'
+                script {
+                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                    // On garde le tag latest pour faciliter l'usage manuel
+                    sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+                }
             }
         }
         stage('Verify') {
             steps {
-                sh 'docker run -d -p 5000:5000 --name jenkins-app jenkins-training-app'
+                // On test l'image taggée spécifiquement pour ce build
+                sh "docker run -d -p 5000:5000 --name jenkins-app-${IMAGE_TAG} ${IMAGE_NAME}:${IMAGE_TAG}"
                 sh 'sleep 5'
                 sh 'curl -f http://localhost:5000'
             }
             post {
                 always {
-                    sh 'docker stop jenkins-app || true'
-                    sh 'docker rm jenkins-app || true'
+                    sh "docker stop jenkins-app-${IMAGE_TAG} || true"
+                    sh "docker rm jenkins-app-${IMAGE_TAG} || true"
                 }
             }
         }
@@ -36,22 +47,38 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
-                    sh 'docker tag jenkins-training-app $DOCKER_USERNAME/jenkins-training-app:latest'
-                    sh 'docker push $DOCKER_USERNAME/jenkins-training-app:latest'
+                    
+                    // Push du tag spécifique (pour rollback)
+                    sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} \$DOCKER_USERNAME/${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "docker push \$DOCKER_USERNAME/${IMAGE_NAME}:${IMAGE_TAG}"
+
+                    // Push du tag latest (pour usage courant)
+                    sh "docker tag ${IMAGE_NAME}:latest \$DOCKER_USERNAME/${IMAGE_NAME}:latest"
+                    sh "docker push \$DOCKER_USERNAME/${IMAGE_NAME}:latest"
                 }
             }
         }
-    
         stage('Deploy') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    // Nettoyage de l'ancien conteneur de prod
                     sh 'docker stop jenkins-prod || true'
                     sh 'docker rm jenkins-prod || true'
-                    sh 'docker pull $DOCKER_USERNAME/jenkins-training-app:latest'
-                    sh 'docker run -d -p 5001:5000 --name jenkins-prod $DOCKER_USERNAME/jenkins-training-app:latest'
+
+                    // Déploiement de la version spécifique de ce build
+                    sh "docker run -d -p 5001:5000 --name jenkins-prod \$DOCKER_USERNAME/${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
-    
+    }
+
+    post {
+        always {
+            // Nettoyage du workspace Jenkins pour éviter la saturation disque
+            cleanWs()
+            // Nettoyage des images locales pour économiser de l'espace (optionnel mais recommandé)
+            sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
+            sh "docker rmi \$DOCKER_USERNAME/${IMAGE_NAME}:${IMAGE_TAG} || true"
+        }
     }
 }
