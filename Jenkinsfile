@@ -42,5 +42,16 @@ pipeline {
             }
         }
     
+        stage('Deploy') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'docker stop jenkins-prod || true'
+                    sh 'docker rm jenkins-prod || true'
+                    sh 'docker pull $DOCKER_USERNAME/jenkins-training-app:latest'
+                    sh 'docker run -d -p 5001:5000 --name jenkins-prod $DOCKER_USERNAME/jenkins-training-app:latest'
+                }
+            }
+        }
+    
     }
 }
