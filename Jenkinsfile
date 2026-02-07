@@ -19,6 +19,19 @@ pipeline {
                 sh 'docker build -t jenkins-training-app .'
             }
         }
+        stage('Verify') {
+            steps {
+                sh 'docker run -d -p 5000:5000 --name jenkins-app jenkins-training-app'
+                sh 'sleep 5'
+                sh 'curl -f http://localhost:5000'
+            }
+            post {
+                always {
+                    sh 'docker stop jenkins-app || true'
+                    sh 'docker rm jenkins-app || true'
+                }
+            }
+        }
     
     }
 }
