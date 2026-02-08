@@ -99,7 +99,7 @@ pipeline {
             cleanWs()
             // Nettoyage des images locales pour économiser de l'espace (optionnel mais recommandé)
             sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
-            sh "docker rmi \$DOCKER_USERNAME/${IMAGE_NAME}:${IMAGE_TAG} || true"
+            sh "docker rmi ${env.DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} || true"
         }
     }
 }
