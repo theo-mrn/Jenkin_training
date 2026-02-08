@@ -1,0 +1,55 @@
+---
+- name: Configure Jenkins App Server
+  hosts: all
+  become: yes
+  vars:
+    docker_image: "{{ docker_image }}"
+    docker_tag: "{{ docker_tag }}"
+
+  tasks:
+    - name: Update yum packages
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Install Docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Install python3-pip (for docker module)
+      yum:
+        name: python3-pip
+        state: present
+
+    - name: Install docker python module
+      pip:
+        name: docker
+        state: present
+
+    - name: Stop and remove existing container
+      docker_container:
+        name: production_app
+        state: absent
+        force_kill: yes
+
+    - name: Run Application Container
+      docker_container:
+        name: production_app
+        image: "{{ docker_image }}:{{ docker_tag }}"
+        state: started
+        ports:
+          - "5000:5000"
+        pull: yes

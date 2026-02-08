@@ -13,3 +13,9 @@ variable "docker_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "key_name" {
+  description = "Name of the SSH key pair"
+  type        = string
+  default     = "jenkins-training-key"
+}

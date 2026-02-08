@@ -73,19 +73,45 @@ pipeline {
         }
         stage('Deploy Infrastructure') {
             steps {
-                // On injecte les crédentials AWS pour Terraform
                 withCredentials([usernamePassword(credentialsId: 'aws-credentials', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     dir('terraform') {
-                        // Initialisation (téléchargement du provider AWS + Configuration du Backend S3)
+                        // Initialisation
                         sh 'terraform init'
                         
-                        // Application : On passe les variables (Image et Tag) à Terraform
-                        // -auto-approve évite que Terraform demande une confirmation manuelle
+                        // Application et récupération de l'IP
                         sh """
                             terraform apply \
                             -var="docker_image=${env.DOCKER_HUB_USER}/${IMAGE_NAME}" \
                             -var="docker_tag=${IMAGE_TAG}" \
                             -auto-approve
+                        """
+                        // Sauvegarde de l'IP pour Ansible
+                        sh "terraform output -raw public_ip > ../ansible/inventory.ini"
+                    }
+                }
+            }
+        }
+
+        stage('Configure with Ansible') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-ec2-key', keyFileVariable: 'SSH_KEY')]) {
+                    dir('ansible') {
+                        // Création d'un inventaire propre
+                        sh 'echo "[webserver]" > hosts'
+                        sh 'cat inventory.ini >> hosts'
+                        
+                        // Installation d'Ansible (si nécessaire)
+                        sh 'pip install ansible --break-system-packages'
+
+                        // Exécution du playbook
+                        // On désactive la vérification de la clé hôte car l'IP change à chaque fois
+                        sh """
+                            export ANSIBLE_HOST_KEY_CHECKING=False
+                            ansible-playbook -i hosts playbook.yml \
+                            -u ec2-user \
+                            --private-key \$SSH_KEY \
+                            -e "docker_image=${env.DOCKER_HUB_USER}/${IMAGE_NAME}" \
+                            -e "docker_tag=${IMAGE_TAG}"
                         """
                     }
                 }
