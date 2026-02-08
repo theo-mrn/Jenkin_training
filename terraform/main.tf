@@ -48,11 +48,18 @@ resource "aws_security_group" "flask_app_sg" {
   }
 }
 
-# 2. L'instance EC2
+# 2. Clé SSH pour l'accès (Jenkins & Admin)
+resource "aws_key_pair" "deployer" {
+  key_name   = "jenkins-training-key"
+  public_key = file("${path.module}/../jenkins_key.pub")
+}
+
+# 3. L'instance EC2
 resource "aws_instance" "app_server" {
 
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = "t2.micro"
+  key_name      = aws_key_pair.deployer.key_name
 
   vpc_security_group_ids = [aws_security_group.flask_app_sg.id]
 
