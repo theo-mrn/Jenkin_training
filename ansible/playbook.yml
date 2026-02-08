@@ -7,13 +7,13 @@
     docker_tag: "{{ docker_tag }}"
 
   tasks:
-    - name: Update yum packages
-      yum:
+    - name: Update dnf packages
+      dnf:
         name: '*'
         state: latest
 
     - name: Install Docker
-      yum:
+      dnf:
         name: docker
         state: present
 
@@ -30,7 +30,7 @@
         append: yes
 
     - name: Install python3-pip (for docker module)
-      yum:
+      dnf:
         name: python3-pip
         state: present
 
