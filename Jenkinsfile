@@ -16,8 +16,9 @@ pipeline {
         }
         stage('Test') {
             steps {
-                sh 'pip install -r requirements.txt --break-system-packages'
-                sh 'python3 -m pytest'
+                sh 'python3 -m venv venv'
+                sh '. venv/bin/activate && pip install -r requirements.txt'
+                sh '. venv/bin/activate && python3 -m pytest'
             }
         }
         stage('Build') {
@@ -70,6 +71,29 @@ pipeline {
                 }
             }
         }
+        stage('Deploy Infrastructure') {
+            steps {
+                // On injecte les crédentials AWS pour Terraform et Docker Hub pour le nom d'utilisateur
+                withCredentials([
+                    usernamePassword(credentialsId: 'aws-credentials', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID'),
+                    usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')
+                ]) {
+                    dir('terraform') {
+                        // Initialisation (téléchargement du provider AWS)
+                        sh 'terraform init'
+                        
+                        // Application : On passe les variables (Image et Tag) à Terraform
+                        // -auto-approve évite que Terraform demande une confirmation manuelle
+                        sh """
+                            terraform apply \
+                            -var="docker_image=\${DOCKER_USERNAME}/${IMAGE_NAME}" \
+                            -var="docker_tag=${IMAGE_TAG}" \
+                            -auto-approve
+                        """
+                    }
+                }
+            }
+        }   
     }
 
     post {
