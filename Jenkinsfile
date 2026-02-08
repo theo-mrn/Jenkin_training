@@ -1,11 +1,11 @@
 pipeline {
     agent any
 
-    environment {
         // Tag avec le numéro de build Jenkins (ex: 1.0.42)
         IMAGE_NAME = "jenkins-training-app"
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         REGISTRY_USER = "" // Sera rempli par withCredentials
+        DOCKER_HUB_USER = "maxwellfaraday" // Change this if different
     }
 
     stages {
