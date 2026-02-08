@@ -76,7 +76,7 @@ pipeline {
                 // On injecte les crédentials AWS pour Terraform
                 withCredentials([usernamePassword(credentialsId: 'aws-credentials', passwordVariable: 'AWS_SECRET_ACCESS_KEY', usernameVariable: 'AWS_ACCESS_KEY_ID')]) {
                     dir('terraform') {
-                        // Initialisation (téléchargement du provider AWS)
+                        // Initialisation (téléchargement du provider AWS + Configuration du Backend S3)
                         sh 'terraform init'
                         
                         // Application : On passe les variables (Image et Tag) à Terraform

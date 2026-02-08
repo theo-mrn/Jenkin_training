@@ -2,6 +2,14 @@ provider "aws" {
   region = var.aws_region
 }
 
+terraform {
+  backend "s3" {
+    bucket = "jenkins-terraform-state-theo-mrn"
+    key    = "jenkins-training/terraform.tfstate"
+    region = "eu-west-3"
+  }
+}
+
 # Récupération dynamique de la dernière AMI Amazon Linux 2
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
