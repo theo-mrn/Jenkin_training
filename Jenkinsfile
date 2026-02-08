@@ -1,6 +1,7 @@
 pipeline {
     agent any
 
+    environment {
         // Tag avec le numéro de build Jenkins (ex: 1.0.42)
         IMAGE_NAME = "jenkins-training-app"
         IMAGE_TAG = "${env.BUILD_NUMBER}"
