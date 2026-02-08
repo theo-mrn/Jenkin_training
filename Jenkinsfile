@@ -105,7 +105,9 @@ pipeline {
 
                         // Exécution du playbook
                         // On désactive la vérification de la clé hôte car l'IP change à chaque fois
+                        // On ajoute le chemin local au PATH pour trouver l'exécutable ansible-playbook
                         sh """
+                            export PATH=\$PATH:~/.local/bin:/var/lib/jenkins/.local/bin
                             export ANSIBLE_HOST_KEY_CHECKING=False
                             ansible-playbook -i hosts playbook.yml \
                             -u ec2-user \
