@@ -36,7 +36,7 @@
 
     - name: Install docker python module
       pip:
-        name: docker
+        name: "docker<6.0"
         state: present
 
     - name: Stop and remove existing container
