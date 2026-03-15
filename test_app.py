@@ -1,6 +1,7 @@
 import pytest
 from app import app
 
+#ceci est mon ajout depuis feature
 def test_hello():
     client = app.test_client()
     response = client.get('/')
